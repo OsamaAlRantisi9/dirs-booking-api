@@ -46,15 +46,17 @@ public class ApiFactory : WebApplicationFactory<Program>
             return (trainee.Id, patient.Id, slot.Id);
         });
 
-    protected override void Dispose(bool disposing)
+    // Dispose() runs DisposeAsync(), which stops the host first, so the database
+    // must be dropped here, while the app's services are still alive.
+    public override async ValueTask DisposeAsync()
     {
         if (UseSqlServer)
         {
             using var scope = Services.CreateScope();
-            scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureDeleted();
+            await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureDeletedAsync();
         }
 
-        base.Dispose(disposing);
+        await base.DisposeAsync();
 
         if (!UseSqlServer)
         {
